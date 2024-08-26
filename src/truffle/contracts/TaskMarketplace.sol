@@ -9,7 +9,10 @@ contract TaskMarketplace {
         address worker;
         bool isCompleted;
         bool isPaid;
+        uint256 completionTime;
     }
+
+    uint256 public constant PAYMENT_DELAY = 30; // Delay before worker can claim payment
 
     mapping(uint256 => Task) public tasks;
     uint256 public taskCount;
@@ -29,7 +32,8 @@ contract TaskMarketplace {
             reward: msg.value,
             worker: address(0),
             isCompleted: false,
-            isPaid: false
+            isPaid: false,
+            completionTime: 0
         });
 
         emit TaskCreated(taskCount, msg.sender, _description, msg.value);
@@ -48,17 +52,22 @@ contract TaskMarketplace {
 
     function completeTask(uint256 _taskId) external {
         Task storage task = tasks[_taskId];
-        require(msg.sender == task.creator, "Only creator can mark task as completed");
+        require(msg.sender == task.worker, "Only assigned worker can mark task as completed");
         require(task.worker != address(0), "Task has not been accepted");
         require(!task.isCompleted, "Task is already completed");
 
         task.isCompleted = true;
+        task.completionTime = block.timestamp;
         emit TaskCompleted(_taskId);
     }
 
     function releasePayment(uint256 _taskId) external {
         Task storage task = tasks[_taskId];
-        require(msg.sender == task.creator, "Only creator can release payment");
+        require(
+            msg.sender == task.creator ||
+            (msg.sender == task.worker && block.timestamp > task.completionTime + PAYMENT_DELAY),
+            "Not authorized to release payment"
+        );
         require(task.isCompleted, "Task is not completed");
         require(!task.isPaid, "Payment already released");
 
