@@ -10,9 +10,11 @@ contract TaskMarketplace {
         bool isCompleted;
         bool isPaid;
         uint256 completionTime;
+        bool isDisputed;
+        string disputeReason;
     }
 
-    uint256 public constant PAYMENT_DELAY = 30; // Delay before worker can claim payment
+    uint256 public constant DISPUTE_PERIOD = 60;
 
     mapping(uint256 => Task) public tasks;
     uint256 public taskCount;
@@ -21,6 +23,14 @@ contract TaskMarketplace {
     event TaskAccepted(uint256 taskId, address worker);
     event TaskCompleted(uint256 taskId);
     event PaymentReleased(uint256 taskId, address worker, uint256 amount);
+    event DisputeRaised(uint256 taskId, string reason);
+    event DisputeResolved(uint256 taskId, bool workerPaid);
+
+    address public arbitrator;
+
+    constructor(address _arbitrator) {
+        arbitrator = _arbitrator;
+    }
 
     function createTask(string memory _description) external payable {
         require(msg.value > 0, "Reward must be greater than 0");
@@ -33,7 +43,9 @@ contract TaskMarketplace {
             worker: address(0),
             isCompleted: false,
             isPaid: false,
-            completionTime: 0
+            completionTime: 0,
+            isDisputed: false,
+            disputeReason: ""
         });
 
         emit TaskCreated(taskCount, msg.sender, _description, msg.value);
@@ -61,15 +73,43 @@ contract TaskMarketplace {
         emit TaskCompleted(_taskId);
     }
 
+    function raiseDispute(uint256 _taskId, string memory _reason) external {
+        Task storage task = tasks[_taskId];
+        require(msg.sender == task.creator, "Only task creator can raise a dispute");
+        require(task.isCompleted, "Task is not completed yet");
+        require(!task.isPaid, "Payment already released");
+        require(!task.isDisputed, "Dispute already raised");
+        require(block.timestamp <= task.completionTime + DISPUTE_PERIOD, "Dispute period has ended");
+
+        task.isDisputed = true;
+        task.disputeReason = _reason;
+        emit DisputeRaised(_taskId, _reason);
+    }
+
+    function resolveDispute(uint256 _taskId, address _recipient) external {
+        require(msg.sender == arbitrator, "Only the arbitrator can resolve disputes");
+        Task storage task = tasks[_taskId];
+        require(task.isDisputed, "No active dispute for this task");
+        require(_recipient == task.worker || _recipient == task.creator, "Invalid recipient");
+
+        task.isDisputed = false;
+        task.isPaid = true;
+
+        payable(_recipient).transfer(task.reward);
+
+        emit DisputeResolved(_taskId, _recipient == task.worker);
+    }
+
     function releasePayment(uint256 _taskId) external {
         Task storage task = tasks[_taskId];
         require(
             msg.sender == task.creator ||
-            (msg.sender == task.worker && block.timestamp > task.completionTime + PAYMENT_DELAY),
+            (msg.sender == task.worker && block.timestamp > task.completionTime + DISPUTE_PERIOD),
             "Not authorized to release payment"
         );
         require(task.isCompleted, "Task is not completed");
         require(!task.isPaid, "Payment already released");
+        require(!task.isDisputed, "Task is currently disputed");
 
         task.isPaid = true;
         payable(task.worker).transfer(task.reward);
