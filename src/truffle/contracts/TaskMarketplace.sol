@@ -76,13 +76,14 @@ contract TaskMarketplace {
         emit TaskCompleted(_taskId);
     }
 
-    function raiseDispute(uint256 _taskId, string memory _reason) external {
+    function raiseDispute(uint256 _taskId, string memory _reason) external payable {
         Task storage task = tasks[_taskId];
         require(msg.sender == task.creator, "Only task creator can raise a dispute");
         require(task.isCompleted, "Task is not completed yet");
         require(!task.isPaid, "Payment already released");
         require(!task.isDisputed, "Dispute already raised");
         require(block.timestamp <= task.completionTime + DISPUTE_PERIOD, "Dispute period has ended");
+        require(msg.value == arbitratorFee, "Must provide arbitrator fee as stake");
 
         task.isDisputed = true;
         task.disputeReason = _reason;
