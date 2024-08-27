@@ -19,6 +19,14 @@ contract TaskMarketplace {
         uint256 stake;
     }
 
+    struct Dispute {
+        address[3] arbitrators;
+        uint256 votesForWorker;
+        uint256 votesForCreator;
+        mapping(address => bool) hasVoted;
+        bool isResolved;
+    }
+
     mapping(address => Arbitrator) public arbitrators;
     address[] public arbitratorList;
 
@@ -26,6 +34,7 @@ contract TaskMarketplace {
     uint256 public constant ARBITRATOR_FEE = 0.02 ether;
 
     mapping(uint256 => Task) public tasks;
+    mapping(uint256 => Dispute) public disputes;
     uint256 public taskCount;
 
     event TaskCreated(uint256 taskId, address creator, string description, uint256 reward);
@@ -119,6 +128,14 @@ contract TaskMarketplace {
 
         task.isDisputed = true;
         task.disputeReason = _reason;
+
+        // Initialize the dispute
+        Dispute storage dispute = disputes[_taskId];
+        dispute.arbitrators = selectArbitrators();
+        dispute.votesForWorker = 0;
+        dispute.votesForCreator = 0;
+        dispute.isResolved = false;
+
         emit DisputeRaised(_taskId, _reason);
     }
 
