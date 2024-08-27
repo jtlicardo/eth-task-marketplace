@@ -124,7 +124,7 @@ contract TaskMarketplace {
         task.isPaid = true;
         
         payable(task.creator).transfer(arbitratorFee);
-        payable(task.worker).transfer(task.reward);
+        payable(task.worker).transfer(task.reward + arbitratorFee);
         
         emit PaymentReleased(_taskId, task.worker, task.reward);
     }
