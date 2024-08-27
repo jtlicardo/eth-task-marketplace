@@ -27,19 +27,21 @@ contract TaskMarketplace {
     event DisputeResolved(uint256 taskId, bool workerPaid);
 
     address public arbitrator;
+    uint256 public arbitratorFee;
 
-    constructor(address _arbitrator) {
+    constructor(address _arbitrator, uint256 _arbitratorFee) {
         arbitrator = _arbitrator;
+        arbitratorFee = _arbitratorFee;
     }
 
     function createTask(string memory _description) external payable {
-        require(msg.value > 0, "Reward must be greater than 0");
+        require(msg.value > arbitratorFee, "Reward must be greater than the arbitrator fee");
 
         taskCount++;
         tasks[taskCount] = Task({
             creator: msg.sender,
             description: _description,
-            reward: msg.value,
+            reward: msg.value - arbitratorFee,
             worker: address(0),
             isCompleted: false,
             isPaid: false,
@@ -48,7 +50,7 @@ contract TaskMarketplace {
             disputeReason: ""
         });
 
-        emit TaskCreated(taskCount, msg.sender, _description, msg.value);
+        emit TaskCreated(taskCount, msg.sender, _description, msg.value - arbitratorFee);
     }
 
     function acceptTask(uint256 _taskId) external {
@@ -95,7 +97,11 @@ contract TaskMarketplace {
         task.isDisputed = false;
         task.isPaid = true;
 
-        payable(_recipient).transfer(task.reward);
+        uint256 paymentAmount = task.reward;
+        task.reward = 0;
+        
+        payable(arbitrator).transfer(arbitratorFee);
+        payable(_recipient).transfer(paymentAmount);
 
         emit DisputeResolved(_taskId, _recipient == task.worker);
     }
@@ -112,7 +118,10 @@ contract TaskMarketplace {
         require(!task.isDisputed, "Task is currently disputed");
 
         task.isPaid = true;
+        
+        payable(task.creator).transfer(arbitratorFee);
         payable(task.worker).transfer(task.reward);
+        
         emit PaymentReleased(_taskId, task.worker, task.reward);
     }
 
