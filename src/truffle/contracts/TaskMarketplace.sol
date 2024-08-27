@@ -36,13 +36,12 @@ contract TaskMarketplace {
 
     function createTask(string memory _description) external payable {
         require(msg.sender != arbitrator, "Arbitrator cannot create tasks");
-        require(msg.value > arbitratorFee, "Reward must be greater than the arbitrator fee");
 
         taskCount++;
         tasks[taskCount] = Task({
             creator: msg.sender,
             description: _description,
-            reward: msg.value - arbitratorFee,
+            reward: msg.value,
             worker: address(0),
             isCompleted: false,
             isPaid: false,
@@ -51,16 +50,16 @@ contract TaskMarketplace {
             disputeReason: ""
         });
 
-        emit TaskCreated(taskCount, msg.sender, _description, msg.value - arbitratorFee);
+        emit TaskCreated(taskCount, msg.sender, _description, msg.value);
     }
 
-    function acceptTask(uint256 _taskId) external {
-        // storage = reference
+    function acceptTask(uint256 _taskId) external payable {
         Task storage task = tasks[_taskId];
         require(msg.sender != arbitrator, "Arbitrator cannot accept tasks");
         require(task.creator != address(0), "Task does not exist");
         require(task.worker == address(0), "Task already accepted");
         require(msg.sender != task.creator, "Creator cannot accept their own task");
+        require(msg.value == arbitratorFee, "Must provide arbitrator fee as stake");
 
         task.worker = msg.sender;
         emit TaskAccepted(_taskId, msg.sender);
