@@ -99,9 +99,11 @@ contract TaskMarketplace {
         task.isDisputed = false;
         task.isPaid = true;
 
-        uint256 paymentAmount = task.reward;
+        // Winning party gets the reward + original arbitrator fee
+        uint256 paymentAmount = task.reward + arbitratorFee;
         task.reward = 0;
         
+        // Arbitrator gets the arbitrator fee from the losing party
         payable(arbitrator).transfer(arbitratorFee);
         payable(_recipient).transfer(paymentAmount);
 
