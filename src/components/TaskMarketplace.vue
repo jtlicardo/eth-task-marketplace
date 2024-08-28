@@ -42,6 +42,9 @@
                     <v-chip class="ml-2" color="primary" small>
                       {{ task.reward }} ETH
                     </v-chip>
+                    <v-chip v-if="task.creator === account" class="ml-2" color="secondary" small>
+                      Your task
+                    </v-chip>
                   </v-list-item-title>
                   <v-list-item-subtitle class="d-flex align-center mb-2">
                     Status:
