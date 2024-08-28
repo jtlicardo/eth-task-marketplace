@@ -31,7 +31,7 @@ contract TaskMarketplace {
     address[] public arbitratorList;
 
     uint256 public constant DISPUTE_PERIOD = 60;
-    uint256 public constant ARBITRATOR_FEE = 0.02 ether;
+    uint256 public constant ARBITRATOR_FEE = 20000000000000000; // 0.02 ether
     uint256 public constant ARBITRATORS_PER_DISPUTE = 3;
 
     mapping(uint256 => Task) public tasks;
@@ -49,6 +49,8 @@ contract TaskMarketplace {
     event ArbitratorVoted(uint256 taskId, address arbitrator, bool voteForWorker);
 
     function createTask(string memory _description) external payable {
+        require(msg.value > 0, "Must provide a reward for the task");
+
         taskCount++;
         tasks[taskCount] = Task({
             creator: msg.sender,
