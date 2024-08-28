@@ -105,11 +105,18 @@
               v-model="arbitratorStake"
               label="Stake (ETH)"
               type="number"
+              :disabled="isArbitrator"
             ></v-text-field>
-            <v-btn color="primary" @click="becomeArbitrator"
+            <v-btn
+              v-if="!isArbitrator"
+              color="primary"
+              @click="becomeArbitrator"
               >Become arbitrator</v-btn
             >
-            <v-btn color="error" class="ml-2" @click="stopBeingArbitrator"
+            <v-btn
+              v-if="isArbitrator"
+              color="error"
+              @click="stopBeingArbitrator"
               >Stop being arbitrator</v-btn
             >
           </v-card-text>
@@ -264,6 +271,9 @@ export default {
           arbitrator.stake,
           "ether"
         );
+        if (this.isArbitrator) {
+          this.arbitratorStake = 0;
+        }
       }
     },
 
@@ -277,7 +287,6 @@ export default {
           ),
         });
         await this.checkArbitratorStatus();
-        this.arbitratorStake = 0;
       } catch (error) {
         console.error("Error becoming arbitrator:", error);
       }
