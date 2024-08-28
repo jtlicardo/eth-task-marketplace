@@ -265,9 +265,19 @@ contract TaskMarketplace {
         return tasks[_taskId];
     }
 
-    function getDisputeArbitrators(uint256 _taskId) external view returns (address[ARBITRATORS_PER_DISPUTE] memory) {
+    function getDisputeArbitrators(uint256 _taskId) external view returns (
+        address[ARBITRATORS_PER_DISPUTE] memory dispute_arbitrators, bool[ARBITRATORS_PER_DISPUTE] memory hasVoted
+    ) {
         require(tasks[_taskId].creator != address(0), "Task does not exist");
         require(tasks[_taskId].isDisputed, "Task is not disputed");
-        return disputes[_taskId].arbitrators;
+        
+        Dispute storage dispute = disputes[_taskId];
+        dispute_arbitrators = dispute.arbitrators;
+        
+        for (uint i = 0; i < ARBITRATORS_PER_DISPUTE; i++) {
+            hasVoted[i] = dispute.hasVoted[dispute_arbitrators[i]];
+        }
+        
+        return (dispute_arbitrators, hasVoted);
     }
 }

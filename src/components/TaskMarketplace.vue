@@ -116,9 +116,17 @@
                   <v-list-item-subtitle v-if="task.isDisputed">
                     Dispute reason: {{ task.disputeReason }}
                   </v-list-item-subtitle>
-                  <v-list-item-subtitle v-if="task.isDisputed && task.arbitrators.length > 0" class="mt-2">
+                  <v-list-item-subtitle
+                    v-if="task.isDisputed && task.arbitrators.length > 0"
+                    class="mt-2"
+                  >
                     Arbitrators:
-                    <v-chip v-for="(arbitrator, index) in task.arbitrators" :key="index" class="mr-1 mb-1" small>
+                    <v-chip
+                      v-for="arbitrator in task.arbitrators"
+                      :key="arbitrator"
+                      class="mr-1 mb-1"
+                      small
+                    >
                       {{ shortenAddress(arbitrator) }}
                     </v-chip>
                   </v-list-item-subtitle>
@@ -151,6 +159,13 @@
                     class="ml-2"
                     >Raise dispute</v-btn
                   >
+                  <v-btn
+                    v-if="canVoteOnDispute(task)"
+                    color="primary"
+                    @click="showVoteDialog(task.id)"
+                    class="ml-2"
+                    >Vote on dispute</v-btn
+                  >
                 </v-list-item-action>
                 <v-divider class="mt-4"></v-divider>
               </v-list-item>
@@ -159,6 +174,30 @@
         </v-card>
       </v-col>
     </v-row>
+    <v-dialog v-model="voteDialog" max-width="400px">
+      <v-card>
+        <v-card-title>Vote on dispute</v-card-title>
+        <v-card-text>
+          <v-radio-group v-model="voteForWorker">
+            <v-radio :label="'Vote for worker'" :value="true"></v-radio>
+            <v-radio :label="'Vote for creator'" :value="false"></v-radio>
+          </v-radio-group>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="blue darken-1" text @click="voteDialog = false"
+            >Cancel</v-btn
+          >
+          <v-btn
+            color="blue darken-1"
+            text
+            @click="submitVote"
+            :disabled="voteForWorker === null"
+            >Submit vote</v-btn
+          >
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -182,6 +221,9 @@ export default {
       arbitratorStake: 0,
       isArbitrator: false,
       arbitratorStakeAmount: 0,
+      voteDialog: false,
+      voteForWorker: null,
+      currentVotingTaskId: null,
     };
   },
   async mounted() {
@@ -202,7 +244,7 @@ export default {
           this.account = accounts[0];
 
           const contractABI = TaskMarketplaceJSON.abi;
-          const contractAddress = "0xc6838ff47eeBe5787af36E1c2734DD8f7aaE02D5";
+          const contractAddress = "0x3b3478fAAE3e612A4086efF314D57767720Ea90e";
           this.contract = new this.web3.eth.Contract(
             contractABI,
             contractAddress
@@ -225,8 +267,19 @@ export default {
       for (let i = 1; i <= taskCount; i++) {
         const task = await this.contract.methods.getTask(i).call();
         let arbitrators = [];
+        let hasVoted = false;
         if (task.isDisputed) {
-          arbitrators = await this.getDisputeArbitrators(i);
+          const [disputeArbitrators, arbitratorVotes] =
+            await this.getDisputeArbitrators(i);
+          arbitrators = disputeArbitrators.filter(
+            (addr) => !this.isZeroAddress(addr)
+          );
+          const arbitratorIndex = arbitrators.findIndex(
+            (addr) => addr.toLowerCase() === this.account.toLowerCase()
+          );
+          if (arbitratorIndex !== -1) {
+            hasVoted = arbitratorVotes[arbitratorIndex];
+          }
         }
         this.tasks.push({
           id: i,
@@ -240,6 +293,7 @@ export default {
           disputeReason: task.disputeReason,
           completionTime: parseInt(task.completionTime),
           arbitrators: arbitrators,
+          hasVoted: hasVoted,
         });
       }
     },
@@ -373,16 +427,58 @@ export default {
     },
     async getDisputeArbitrators(taskId) {
       try {
-        const arbitrators = await this.contract.methods.getDisputeArbitrators(taskId).call();
-        return arbitrators.filter(addr => !this.isZeroAddress(addr));
+        const result = await this.contract.methods
+          .getDisputeArbitrators(taskId)
+          .call();
+
+        if (result && result.dispute_arbitrators && result.hasVoted) {
+          return [result.dispute_arbitrators, result.hasVoted];
+        } else {
+          console.error(
+            "Unexpected result format from getDisputeArbitrators:",
+            result
+          );
+          return [[], []];
+        }
       } catch (error) {
         console.error("Error fetching dispute arbitrators:", error);
-        return [];
+        return [[], []];
       }
     },
     shortenAddress(address) {
-      if (!address) return '';
+      if (!address) return "";
       return `${address.substr(0, 6)}...${address.substr(-4)}`;
+    },
+    canVoteOnDispute(task) {
+      return (
+        this.isArbitrator &&
+        task.isDisputed &&
+        task.arbitrators.includes(this.account) &&
+        !task.hasVoted
+      );
+    },
+    showVoteDialog(taskId) {
+      this.currentVotingTaskId = taskId;
+      this.voteForWorker = null;
+      this.voteDialog = true;
+    },
+    async submitVote() {
+      if (this.voteForWorker === null) {
+        alert("Please select a vote option");
+        return;
+      }
+
+      try {
+        await this.contract.methods
+          .voteOnDispute(this.currentVotingTaskId, this.voteForWorker)
+          .send({
+            from: this.account,
+          });
+        this.voteDialog = false;
+        await this.loadTasks();
+      } catch (error) {
+        console.error("Error submitting vote:", error);
+      }
     },
   },
 };
