@@ -144,7 +144,7 @@ contract TaskMarketplace {
     }
 
     function selectArbitrators(address _taskCreator) private view returns (address[3] memory) {
-        require(arbitratorList.length > ARBITRATORS_PER_DISPUTE, "Not enough arbitrators");
+        require(arbitratorList.length >= ARBITRATORS_PER_DISPUTE, "Not enough arbitrators");
 
         // Randomly select 10 arbitrators (or less if less than 10 are available)
         uint256 selectCount = arbitratorList.length < 10 ? arbitratorList.length : 10;
