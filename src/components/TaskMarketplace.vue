@@ -38,11 +38,14 @@
               <v-list-item v-for="task in tasks" :key="task.id">
                 <v-list-item-content>
                   <v-list-item-title>{{ task.description }}</v-list-item-title>
-                  <v-list-item-subtitle
-                    >Reward: {{ task.reward }} ETH</v-list-item-subtitle
-                  >
+                  <v-list-item-subtitle>
+                    Reward: {{ task.reward }} ETH
+                  </v-list-item-subtitle>
+                  <v-list-item-subtitle>
+                    Creator: {{ task.creator }}
+                  </v-list-item-subtitle>
                 </v-list-item-content>
-                <v-list-item-action>
+                <v-list-item-action class="mt-2">
                   <v-btn
                     v-if="
                       isZeroAddress(task.worker) && task.creator !== account
