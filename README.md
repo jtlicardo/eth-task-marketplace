@@ -13,7 +13,15 @@ ETH Task Marketplace is a decentralized application (dApp) built on Ethereum tha
 
 ## Screenshots
 
-...
+![image](./screenshots/5.png)
+
+![image](./screenshots/1.png)
+
+![image](./screenshots/2.png)
+
+![image](./screenshots/3.png)
+
+![image](./screenshots/4.png)
 
 ## Tech stack
 
@@ -29,6 +37,8 @@ ETH Task Marketplace is a decentralized application (dApp) built on Ethereum tha
 
    ```
    git clone https://github.com/jtlicardo/eth-task-marketplace.git
+   ```
+   ```
    cd eth-task-marketplace
    ```
 
@@ -56,7 +66,7 @@ ETH Task Marketplace is a decentralized application (dApp) built on Ethereum tha
 
 5. Open your browser and navigate to `http://localhost:3000`
 
-## Smart Contract Deployment
+## Smart contract deployment
 
 1. Install Truffle globally:
 
