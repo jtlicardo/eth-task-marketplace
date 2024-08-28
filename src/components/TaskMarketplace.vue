@@ -2,18 +2,10 @@
   <v-container>
     <v-row>
       <v-col cols="12">
-        <v-alert
-          v-if="account"
-          type="info"
-          outlined
-        >
+        <v-alert v-if="account" type="info" outlined>
           Current Account: {{ account }}
         </v-alert>
-        <v-alert
-          v-else
-          type="warning"
-          outlined
-        >
+        <v-alert v-else type="warning" outlined>
           No account connected. Please connect to MetaMask.
         </v-alert>
       </v-col>
@@ -52,7 +44,9 @@
                 </v-list-item-content>
                 <v-list-item-action>
                   <v-btn
-                    v-if="!task.worker && task.creator !== account"
+                    v-if="
+                      isZeroAddress(task.worker) && task.creator !== account
+                    "
                     color="success"
                     @click="acceptTask(task.id)"
                     >Accept</v-btn
@@ -83,6 +77,8 @@
 import Web3 from "web3";
 import TaskMarketplaceJSON from "@/truffle/build/contracts/TaskMarketplace.json";
 
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
 export default {
   data() {
     return {
@@ -101,6 +97,9 @@ export default {
     await this.loadTasks();
   },
   methods: {
+    isZeroAddress(address) {
+      return address === ZERO_ADDRESS;
+    },
     async initWeb3() {
       if (window.ethereum) {
         this.web3 = new Web3(window.ethereum);
@@ -117,11 +116,10 @@ export default {
           );
 
           // Add event listener for account changes
-          window.ethereum.on('accountsChanged', (accounts) => {
+          window.ethereum.on("accountsChanged", (accounts) => {
             this.account = accounts[0];
             this.loadTasks(); // Reload tasks when account changes
           });
-
         } catch (error) {
           console.error("User denied account access");
         }
