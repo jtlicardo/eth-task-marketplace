@@ -1,6 +1,25 @@
 <template>
   <v-container>
     <v-row>
+      <v-col cols="12">
+        <v-alert
+          v-if="account"
+          type="info"
+          outlined
+        >
+          Current Account: {{ account }}
+        </v-alert>
+        <v-alert
+          v-else
+          type="warning"
+          outlined
+        >
+          No account connected. Please connect to MetaMask.
+        </v-alert>
+      </v-col>
+    </v-row>
+
+    <v-row>
       <v-col cols="12" md="6">
         <v-card>
           <v-card-title>Create Task</v-card-title>
@@ -33,7 +52,7 @@
                 </v-list-item-content>
                 <v-list-item-action>
                   <v-btn
-                    v-if="!task.worker"
+                    v-if="!task.worker && task.creator !== account"
                     color="success"
                     @click="acceptTask(task.id)"
                     >Accept</v-btn
@@ -96,6 +115,13 @@ export default {
             contractABI,
             contractAddress
           );
+
+          // Add event listener for account changes
+          window.ethereum.on('accountsChanged', (accounts) => {
+            this.account = accounts[0];
+            this.loadTasks(); // Reload tasks when account changes
+          });
+
         } catch (error) {
           console.error("User denied account access");
         }
@@ -112,6 +138,7 @@ export default {
           id: i,
           description: task.description,
           reward: this.web3.utils.fromWei(task.reward, "ether"),
+          creator: task.creator,
           worker: task.worker,
           isCompleted: task.isCompleted,
           isPaid: task.isPaid,
