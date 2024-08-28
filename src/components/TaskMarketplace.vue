@@ -14,7 +14,7 @@
     <v-row>
       <v-col cols="12" md="6">
         <v-card>
-          <v-card-title>Create Task</v-card-title>
+          <v-card-title>Create task</v-card-title>
           <v-card-text>
             <v-text-field
               v-model="newTask.description"
@@ -31,6 +31,51 @@
       </v-col>
 
       <v-col cols="12" md="6">
+        <v-card>
+          <v-card-title>Arbitrator actions</v-card-title>
+          <v-card-text>
+            <v-text-field
+              v-model="arbitratorStake"
+              label="Stake (ETH)"
+              type="number"
+              :disabled="isArbitrator"
+            ></v-text-field>
+            <v-btn
+              v-if="!isArbitrator"
+              color="primary"
+              @click="becomeArbitrator"
+              >Become arbitrator</v-btn
+            >
+            <v-btn
+              v-if="isArbitrator"
+              color="error"
+              @click="stopBeingArbitrator"
+              >Stop being arbitrator</v-btn
+            >
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <v-row>
+      <v-col cols="12" md="6">
+        <v-card>
+          <v-card-title>Arbitrator status</v-card-title>
+          <v-card-text>
+            <v-alert v-if="isArbitrator" type="success" outlined>
+              You are currently an arbitrator with a stake of
+              {{ arbitratorStakeAmount }} ETH.
+            </v-alert>
+            <v-alert v-else type="info" outlined>
+              You are not currently an arbitrator.
+            </v-alert>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <v-row>
+      <v-col cols="12">
         <v-card>
           <v-card-title>Task list</v-card-title>
           <v-card-text>
@@ -91,49 +136,6 @@
                 <v-divider class="mt-4"></v-divider>
               </v-list-item>
             </v-list>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <v-row>
-      <v-col cols="12" md="6">
-        <v-card>
-          <v-card-title>Arbitrator actions</v-card-title>
-          <v-card-text>
-            <v-text-field
-              v-model="arbitratorStake"
-              label="Stake (ETH)"
-              type="number"
-              :disabled="isArbitrator"
-            ></v-text-field>
-            <v-btn
-              v-if="!isArbitrator"
-              color="primary"
-              @click="becomeArbitrator"
-              >Become arbitrator</v-btn
-            >
-            <v-btn
-              v-if="isArbitrator"
-              color="error"
-              @click="stopBeingArbitrator"
-              >Stop being arbitrator</v-btn
-            >
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" md="6">
-        <v-card>
-          <v-card-title>Arbitrator status</v-card-title>
-          <v-card-text>
-            <v-alert v-if="isArbitrator" type="success" outlined>
-              You are currently an arbitrator with a stake of
-              {{ arbitratorStakeAmount }} ETH.
-            </v-alert>
-            <v-alert v-else type="info" outlined>
-              You are not currently an arbitrator.
-            </v-alert>
           </v-card-text>
         </v-card>
       </v-col>
