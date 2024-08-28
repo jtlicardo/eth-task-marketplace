@@ -244,7 +244,14 @@ export default {
           this.account = accounts[0];
 
           const contractABI = TaskMarketplaceJSON.abi;
-          const contractAddress = "0x3b3478fAAE3e612A4086efF314D57767720Ea90e";
+          const contractAddress = import.meta.env.VITE_APP_CONTRACT_ADDRESS;
+
+          if (!contractAddress) {
+            throw new Error(
+              "Contract address not set in environment variables"
+            );
+          }
+
           this.contract = new this.web3.eth.Contract(
             contractABI,
             contractAddress

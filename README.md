@@ -4,12 +4,12 @@ ETH Task Marketplace is a decentralized application (dApp) built on Ethereum tha
 
 ## Features
 
-* Create tasks with ETH rewards  
-* Accept tasks and earn rewards  
-* Complete tasks and release payments  
-* Raise disputes for task completion  
-* Become an arbitrator and vote on disputes  
-* MetaMask integration for Ethereum transactions  
+- Create tasks with ETH rewards
+- Accept tasks and earn rewards
+- Complete tasks and release payments
+- Raise disputes for task completion
+- Become an arbitrator and vote on disputes
+- MetaMask integration for Ethereum transactions
 
 ## Screenshots
 
@@ -17,45 +17,61 @@ ETH Task Marketplace is a decentralized application (dApp) built on Ethereum tha
 
 ## Tech stack
 
-* Vue.js 3  
-* Vuetify 3  
-* web3.js  
-* Solidity  
-* Truffle (for smart contract development and deployment)  
+- Vue.js 3
+- Vuetify 3
+- web3.js
+- Solidity
+- Truffle (for smart contract development and deployment)
 
 ## Setup and installation
 
 1. Clone the repository:
+
    ```
    git clone https://github.com/jtlicardo/eth-task-marketplace.git
    cd eth-task-marketplace
    ```
 
 2. Install dependencies:
+
    ```
    npm install
    ```
 
-3. Start the development server:
+3. Set up environment variables:
+
+   Create a `.env` file in the root directory of the project and add the following:
+
+   ```
+   VITE_APP_CONTRACT_ADDRESS=your_contract_address_here
+   ```
+
+   Replace `your_contract_address_here` with the actual address of your deployed contract.
+
+4. Start the development server:
+
    ```
    npm run dev
    ```
 
-4. Open your browser and navigate to `http://localhost:3000`
+5. Open your browser and navigate to `http://localhost:3000`
 
 ## Smart Contract Deployment
 
 1. Install Truffle globally:
+
    ```
    npm install -g truffle
    ```
 
 2. Navigate to the Truffle project directory:
+
    ```
    cd src/truffle
    ```
 
 3. Compile the smart contracts:
+
    ```
    truffle compile
    ```
