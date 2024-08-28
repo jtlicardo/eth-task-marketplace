@@ -133,9 +133,8 @@ export default {
           );
 
           // Add event listener for account changes
-          window.ethereum.on("accountsChanged", (accounts) => {
-            this.account = accounts[0];
-            this.loadTasks(); // Reload tasks when account changes
+          window.ethereum.on("accountsChanged", () => {
+            window.location.reload();
           });
         } catch (error) {
           console.error("User denied account access");
