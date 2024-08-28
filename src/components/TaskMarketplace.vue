@@ -3,7 +3,7 @@
     <v-row>
       <v-col cols="12">
         <v-alert v-if="account" type="info" outlined>
-          Current Account: {{ account }}
+          Current account: {{ account }}
         </v-alert>
         <v-alert v-else type="warning" outlined>
           No account connected. Please connect to MetaMask.
@@ -18,21 +18,21 @@
           <v-card-text>
             <v-text-field
               v-model="newTask.description"
-              label="Task Description"
+              label="Task description"
             ></v-text-field>
             <v-text-field
               v-model="newTask.reward"
               label="Reward (ETH)"
               type="number"
             ></v-text-field>
-            <v-btn color="primary" @click="createTask">Create Task</v-btn>
+            <v-btn color="primary" @click="createTask">Create task</v-btn>
           </v-card-text>
         </v-card>
       </v-col>
 
       <v-col cols="12" md="6">
         <v-card>
-          <v-card-title>Task List</v-card-title>
+          <v-card-title>Task list</v-card-title>
           <v-card-text>
             <v-list>
               <v-list-item v-for="task in tasks" :key="task.id" class="mb-4">
@@ -42,7 +42,12 @@
                     <v-chip class="ml-2" color="primary" small>
                       {{ task.reward }} ETH
                     </v-chip>
-                    <v-chip v-if="task.creator === account" class="ml-2" color="secondary" small>
+                    <v-chip
+                      v-if="task.creator === account"
+                      class="ml-2"
+                      color="secondary"
+                      small
+                    >
                       Your task
                     </v-chip>
                   </v-list-item-title>
@@ -90,6 +95,42 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <v-row>
+      <v-col cols="12" md="6">
+        <v-card>
+          <v-card-title>Arbitrator actions</v-card-title>
+          <v-card-text>
+            <v-text-field
+              v-model="arbitratorStake"
+              label="Stake (ETH)"
+              type="number"
+            ></v-text-field>
+            <v-btn color="primary" @click="becomeArbitrator"
+              >Become arbitrator</v-btn
+            >
+            <v-btn color="error" class="ml-2" @click="stopBeingArbitrator"
+              >Stop being arbitrator</v-btn
+            >
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" md="6">
+        <v-card>
+          <v-card-title>Arbitrator status</v-card-title>
+          <v-card-text>
+            <v-alert v-if="isArbitrator" type="success" outlined>
+              You are currently an arbitrator with a stake of
+              {{ arbitratorStakeAmount }} ETH.
+            </v-alert>
+            <v-alert v-else type="info" outlined>
+              You are not currently an arbitrator.
+            </v-alert>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
@@ -110,11 +151,15 @@ export default {
         description: "",
         reward: 0,
       },
+      arbitratorStake: 0,
+      isArbitrator: false,
+      arbitratorStakeAmount: 0,
     };
   },
   async mounted() {
     await this.initWeb3();
     await this.loadTasks();
+    await this.checkArbitratorStatus();
   },
   methods: {
     isZeroAddress(address) {
@@ -207,6 +252,45 @@ export default {
         await this.loadTasks();
       } catch (error) {
         console.error("Error releasing payment:", error);
+      }
+    },
+    async checkArbitratorStatus() {
+      if (this.account) {
+        const arbitrator = await this.contract.methods
+          .arbitrators(this.account)
+          .call();
+        this.isArbitrator = arbitrator.isActive;
+        this.arbitratorStakeAmount = this.web3.utils.fromWei(
+          arbitrator.stake,
+          "ether"
+        );
+      }
+    },
+
+    async becomeArbitrator() {
+      try {
+        await this.contract.methods.becomeArbitrator().send({
+          from: this.account,
+          value: this.web3.utils.toWei(
+            this.arbitratorStake.toString(),
+            "ether"
+          ),
+        });
+        await this.checkArbitratorStatus();
+        this.arbitratorStake = 0;
+      } catch (error) {
+        console.error("Error becoming arbitrator:", error);
+      }
+    },
+
+    async stopBeingArbitrator() {
+      try {
+        await this.contract.methods.stopBeingArbitrator().send({
+          from: this.account,
+        });
+        await this.checkArbitratorStatus();
+      } catch (error) {
+        console.error("Error stopping being arbitrator:", error);
       }
     },
     getTaskStatus(task) {
