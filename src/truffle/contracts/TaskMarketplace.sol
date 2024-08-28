@@ -141,7 +141,7 @@ contract TaskMarketplace {
         emit DisputeRaised(_taskId, _reason);
     }
 
-    function selectArbitrators() public view returns (address[3] memory) {
+    function selectArbitrators() private view returns (address[3] memory) {
         require(arbitratorList.length >= ARBITRATORS_PER_DISPUTE, "Not enough arbitrators");
 
         // Randomly select 10 arbitrators (or less if less than 10 are available)
@@ -153,8 +153,8 @@ contract TaskMarketplace {
             indices[i] = i;
         }
 
-        for (uint256 i = 0; i < 10; i++) {
-            uint256 randomIndex = uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty, i))) % (arbitratorList.length - i);
+        for (uint256 i = 0; i < selectCount; i++) {
+            uint256 randomIndex = uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, i))) % (arbitratorList.length - i);
             selectedArbitrators[i] = arbitratorList[indices[randomIndex]];
             indices[randomIndex] = indices[arbitratorList.length - i - 1];
         }
