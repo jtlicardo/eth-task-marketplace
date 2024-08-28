@@ -108,7 +108,19 @@
                     {{ getTaskStatus(task).text }}
                   </v-list-item-subtitle>
                   <v-list-item-subtitle>
-                    Creator: {{ task.creator }}
+                    Creator: {{ shortenAddress(task.creator) }}
+                  </v-list-item-subtitle>
+                  <v-list-item-subtitle v-if="!isZeroAddress(task.worker)">
+                    Worker: {{ shortenAddress(task.worker) }}
+                  </v-list-item-subtitle>
+                  <v-list-item-subtitle v-if="task.isDisputed">
+                    Dispute reason: {{ task.disputeReason }}
+                  </v-list-item-subtitle>
+                  <v-list-item-subtitle v-if="task.isDisputed && task.arbitrators.length > 0" class="mt-2">
+                    Arbitrators:
+                    <v-chip v-for="(arbitrator, index) in task.arbitrators" :key="index" class="mr-1 mb-1" small>
+                      {{ shortenAddress(arbitrator) }}
+                    </v-chip>
                   </v-list-item-subtitle>
                 </v-list-item-content>
                 <v-list-item-action class="mt-2">
@@ -136,7 +148,9 @@
                     v-if="canRaiseDispute(task)"
                     color="error"
                     @click="raiseDispute(task.id)"
-                  >Raise dispute</v-btn>
+                    class="ml-2"
+                    >Raise dispute</v-btn
+                  >
                 </v-list-item-action>
                 <v-divider class="mt-4"></v-divider>
               </v-list-item>
@@ -188,7 +202,7 @@ export default {
           this.account = accounts[0];
 
           const contractABI = TaskMarketplaceJSON.abi;
-          const contractAddress = "0x15eA9f684947971835ebaAbaa53Ad7510f6CB8A8";
+          const contractAddress = "0xc6838ff47eeBe5787af36E1c2734DD8f7aaE02D5";
           this.contract = new this.web3.eth.Contract(
             contractABI,
             contractAddress
@@ -210,6 +224,10 @@ export default {
       this.tasks = [];
       for (let i = 1; i <= taskCount; i++) {
         const task = await this.contract.methods.getTask(i).call();
+        let arbitrators = [];
+        if (task.isDisputed) {
+          arbitrators = await this.getDisputeArbitrators(i);
+        }
         this.tasks.push({
           id: i,
           description: task.description,
@@ -221,6 +239,7 @@ export default {
           isDisputed: task.isDisputed,
           disputeReason: task.disputeReason,
           completionTime: parseInt(task.completionTime),
+          arbitrators: arbitrators,
         });
       }
     },
@@ -318,7 +337,7 @@ export default {
         task.isCompleted &&
         !task.isPaid &&
         !task.isDisputed &&
-        Date.now() / 1000 <= task.completionTime + 60 // 60 seconds dispute period
+        Date.now() / 1000 <= task.completionTime + 600 // 10 minute dispute period
       );
     },
 
@@ -326,7 +345,9 @@ export default {
       try {
         const reason = prompt("Please enter the reason for raising a dispute:");
         if (reason) {
-          const arbitratorFee = await this.contract.methods.ARBITRATOR_FEE().call();
+          const arbitratorFee = await this.contract.methods
+            .ARBITRATOR_FEE()
+            .call();
           await this.contract.methods.raiseDispute(taskId, reason).send({
             from: this.account,
             value: arbitratorFee,
@@ -349,6 +370,19 @@ export default {
       } else {
         return { color: "grey", text: "Open" };
       }
+    },
+    async getDisputeArbitrators(taskId) {
+      try {
+        const arbitrators = await this.contract.methods.getDisputeArbitrators(taskId).call();
+        return arbitrators.filter(addr => !this.isZeroAddress(addr));
+      } catch (error) {
+        console.error("Error fetching dispute arbitrators:", error);
+        return [];
+      }
+    },
+    shortenAddress(address) {
+      if (!address) return '';
+      return `${address.substr(0, 6)}...${address.substr(-4)}`;
     },
   },
 };

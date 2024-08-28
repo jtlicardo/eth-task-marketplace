@@ -30,7 +30,7 @@ contract TaskMarketplace {
     mapping(address => Arbitrator) public arbitrators;
     address[] public arbitratorList;
 
-    uint256 public constant DISPUTE_PERIOD = 60;
+    uint256 public constant DISPUTE_PERIOD = 60 * 10;
     uint256 public constant ARBITRATOR_FEE = 20000000000000000; // 0.02 ether
     uint256 public constant ARBITRATORS_PER_DISPUTE = 3;
 
@@ -123,12 +123,14 @@ contract TaskMarketplace {
 
     function raiseDispute(uint256 _taskId, string memory _reason) external payable {
         Task storage task = tasks[_taskId];
+        require(task.creator != address(0), "Task does not exist");
         require(msg.sender == task.creator, "Only task creator can raise a dispute");
         require(task.isCompleted, "Task is not completed yet");
         require(!task.isPaid, "Payment already released");
         require(!task.isDisputed, "Dispute already raised");
         require(block.timestamp <= task.completionTime + DISPUTE_PERIOD, "Dispute period has ended");
         require(msg.value == ARBITRATOR_FEE, "Must provide arbitrator fee as stake");
+        require(arbitratorList.length >= ARBITRATORS_PER_DISPUTE, "Not enough arbitrators available");
 
         task.isDisputed = true;
         task.disputeReason = _reason;
@@ -144,8 +146,6 @@ contract TaskMarketplace {
     }
 
     function selectArbitrators(address _taskCreator) private view returns (address[3] memory) {
-        require(arbitratorList.length >= ARBITRATORS_PER_DISPUTE, "Not enough arbitrators");
-
         // Randomly select 10 arbitrators (or less if less than 10 are available)
         uint256 selectCount = arbitratorList.length < 10 ? arbitratorList.length : 10;
         address[] memory selectedArbitrators = new address[](selectCount);
@@ -263,5 +263,11 @@ contract TaskMarketplace {
     function getTask(uint256 _taskId) external view returns (Task memory) {
         require(tasks[_taskId].creator != address(0), "Task does not exist");
         return tasks[_taskId];
+    }
+
+    function getDisputeArbitrators(uint256 _taskId) external view returns (address[ARBITRATORS_PER_DISPUTE] memory) {
+        require(tasks[_taskId].creator != address(0), "Task does not exist");
+        require(tasks[_taskId].isDisputed, "Task is not disputed");
+        return disputes[_taskId].arbitrators;
     }
 }
