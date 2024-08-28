@@ -35,11 +35,24 @@
           <v-card-title>Task List</v-card-title>
           <v-card-text>
             <v-list>
-              <v-list-item v-for="task in tasks" :key="task.id">
+              <v-list-item v-for="task in tasks" :key="task.id" class="mb-4">
                 <v-list-item-content>
-                  <v-list-item-title>{{ task.description }}</v-list-item-title>
-                  <v-list-item-subtitle>
-                    Reward: {{ task.reward }} ETH
+                  <v-list-item-title class="d-flex align-center mb-2">
+                    {{ task.description }}
+                    <v-chip class="ml-2" color="primary" small>
+                      {{ task.reward }} ETH
+                    </v-chip>
+                  </v-list-item-title>
+                  <v-list-item-subtitle class="d-flex align-center mb-2">
+                    Status:
+                    <v-icon
+                      :color="getTaskStatus(task).color"
+                      small
+                      class="ml-1 mr-1"
+                    >
+                      mdi-circle
+                    </v-icon>
+                    {{ getTaskStatus(task).text }}
                   </v-list-item-subtitle>
                   <v-list-item-subtitle>
                     Creator: {{ task.creator }}
@@ -67,6 +80,7 @@
                     >Release Payment</v-btn
                   >
                 </v-list-item-action>
+                <v-divider class="mt-4"></v-divider>
               </v-list-item>
             </v-list>
           </v-card-text>
@@ -80,7 +94,7 @@
 import Web3 from "web3";
 import TaskMarketplaceJSON from "@/truffle/build/contracts/TaskMarketplace.json";
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 export default {
   data() {
@@ -191,6 +205,17 @@ export default {
         await this.loadTasks();
       } catch (error) {
         console.error("Error releasing payment:", error);
+      }
+    },
+    getTaskStatus(task) {
+      if (task.isPaid) {
+        return { color: "green", text: "Completed and paid" };
+      } else if (task.isCompleted) {
+        return { color: "orange", text: "Completed (awaiting payment)" };
+      } else if (!this.isZeroAddress(task.worker)) {
+        return { color: "blue", text: "In progress" };
+      } else {
+        return "Open";
       }
     },
   },
