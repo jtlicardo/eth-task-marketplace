@@ -135,7 +135,7 @@ contract TaskMarketplace {
 
         // Initialize the dispute
         Dispute storage dispute = disputes[_taskId];
-        dispute.arbitrators = selectArbitrators();
+        dispute.arbitrators = selectArbitrators(task.creator);
         dispute.votesForWorker = 0;
         dispute.votesForCreator = 0;
         dispute.isResolved = false;
@@ -143,22 +143,28 @@ contract TaskMarketplace {
         emit DisputeRaised(_taskId, _reason);
     }
 
-    function selectArbitrators() private view returns (address[3] memory) {
-        require(arbitratorList.length >= ARBITRATORS_PER_DISPUTE, "Not enough arbitrators");
+    function selectArbitrators(address _taskCreator) private view returns (address[3] memory) {
+        require(arbitratorList.length > ARBITRATORS_PER_DISPUTE, "Not enough arbitrators");
 
         // Randomly select 10 arbitrators (or less if less than 10 are available)
         uint256 selectCount = arbitratorList.length < 10 ? arbitratorList.length : 10;
         address[] memory selectedArbitrators = new address[](selectCount);
         uint256[] memory indices = new uint256[](arbitratorList.length);
+        uint256 validArbitratorCount = 0;
         
         for (uint256 i = 0; i < arbitratorList.length; i++) {
-            indices[i] = i;
+            if (arbitratorList[i] != _taskCreator) {
+                indices[validArbitratorCount] = i;
+                validArbitratorCount++;
+            }
         }
 
-        for (uint256 i = 0; i < selectCount; i++) {
-            uint256 randomIndex = uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, i))) % (arbitratorList.length - i);
+        require(validArbitratorCount >= ARBITRATORS_PER_DISPUTE, "Not enough eligible arbitrators");
+
+        for (uint256 i = 0; i < selectCount && i < validArbitratorCount; i++) {
+            uint256 randomIndex = uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, i))) % (validArbitratorCount - i);
             selectedArbitrators[i] = arbitratorList[indices[randomIndex]];
-            indices[randomIndex] = indices[arbitratorList.length - i - 1];
+            indices[randomIndex] = indices[validArbitratorCount - i - 1];
         }
 
         // Select top 3 arbitrators with highest stakes
@@ -166,7 +172,7 @@ contract TaskMarketplace {
         for (uint256 i = 0; i < ARBITRATORS_PER_DISPUTE; i++) {
             uint256 maxStake = 0;
             uint256 maxIndex = 0;
-            for (uint256 j = 0; j < 10; j++) {
+            for (uint256 j = 0; j < selectCount; j++) {
                 if (selectedArbitrators[j] != address(0) && arbitrators[selectedArbitrators[j]].stake > maxStake) {
                     maxStake = arbitrators[selectedArbitrators[j]].stake;
                     maxIndex = j;

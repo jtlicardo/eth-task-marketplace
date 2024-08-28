@@ -132,6 +132,11 @@
                     @click="releasePayment(task.id)"
                     >Release Payment</v-btn
                   >
+                  <v-btn
+                    v-if="canRaiseDispute(task)"
+                    color="error"
+                    @click="raiseDispute(task.id)"
+                  >Raise dispute</v-btn>
                 </v-list-item-action>
                 <v-divider class="mt-4"></v-divider>
               </v-list-item>
@@ -213,6 +218,9 @@ export default {
           worker: task.worker,
           isCompleted: task.isCompleted,
           isPaid: task.isPaid,
+          isDisputed: task.isDisputed,
+          disputeReason: task.disputeReason,
+          completionTime: parseInt(task.completionTime),
         });
       }
     },
@@ -304,15 +312,42 @@ export default {
         console.error("Error stopping being arbitrator:", error);
       }
     },
+    canRaiseDispute(task) {
+      return (
+        task.creator === this.account &&
+        task.isCompleted &&
+        !task.isPaid &&
+        !task.isDisputed &&
+        Date.now() / 1000 <= task.completionTime + 60 // 60 seconds dispute period
+      );
+    },
+
+    async raiseDispute(taskId) {
+      try {
+        const reason = prompt("Please enter the reason for raising a dispute:");
+        if (reason) {
+          const arbitratorFee = await this.contract.methods.ARBITRATOR_FEE().call();
+          await this.contract.methods.raiseDispute(taskId, reason).send({
+            from: this.account,
+            value: arbitratorFee,
+          });
+          await this.loadTasks();
+        }
+      } catch (error) {
+        console.error("Error raising dispute:", error);
+      }
+    },
     getTaskStatus(task) {
       if (task.isPaid) {
         return { color: "green", text: "Completed and paid" };
+      } else if (task.isDisputed) {
+        return { color: "red", text: "Disputed" };
       } else if (task.isCompleted) {
         return { color: "orange", text: "Completed (awaiting payment)" };
       } else if (!this.isZeroAddress(task.worker)) {
         return { color: "blue", text: "In progress" };
       } else {
-        return "Open";
+        return { color: "grey", text: "Open" };
       }
     },
   },
