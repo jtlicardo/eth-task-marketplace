@@ -2,6 +2,10 @@
 
 ETH Task Marketplace is a decentralized application (dApp) built on Ethereum that allows users to create, accept, and manage tasks with cryptocurrency rewards. The platform also includes a dispute resolution system with arbitrators.
 
+Project for the [Blockchain applications](https://fipu.unipu.hr/fipu/en/course/bcinf) course (2023./2024.)  
+[**Faculty of Informatics**](https://fipu.unipu.hr/)  
+[**Juraj Dobrila University of Pula**](https://www.unipu.hr/)  
+
 ## Features
 
 - Create tasks with ETH rewards
