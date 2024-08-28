@@ -32,6 +32,7 @@ contract TaskMarketplace {
 
     uint256 public constant DISPUTE_PERIOD = 60;
     uint256 public constant ARBITRATOR_FEE = 0.02 ether;
+    uint256 public constant ARBITRATORS_PER_DISPUTE = 3;
 
     mapping(uint256 => Task) public tasks;
     mapping(uint256 => Dispute) public disputes;
@@ -45,6 +46,7 @@ contract TaskMarketplace {
     event DisputeResolved(uint256 taskId, bool workerPaid);
     event ArbitratorAdded(address arbitrator, uint256 stake);
     event ArbitratorRemoved(address arbitrator, uint256 returnedStake);
+    event ArbitratorVoted(uint256 taskId, address arbitrator, bool voteForWorker);
 
     function createTask(string memory _description) external payable {
         taskCount++;
@@ -140,7 +142,7 @@ contract TaskMarketplace {
     }
 
     function selectArbitrators() public view returns (address[3] memory) {
-        require(arbitratorList.length >= 3, "Not enough arbitrators");
+        require(arbitratorList.length >= ARBITRATORS_PER_DISPUTE, "Not enough arbitrators");
 
         // Randomly select 10 arbitrators (or less if less than 10 are available)
         uint256 selectCount = arbitratorList.length < 10 ? arbitratorList.length : 10;
@@ -158,8 +160,8 @@ contract TaskMarketplace {
         }
 
         // Select top 3 arbitrators with highest stakes
-        address[3] memory topThree;
-        for (uint256 i = 0; i < 3; i++) {
+        address[ARBITRATORS_PER_DISPUTE] memory topThree;
+        for (uint256 i = 0; i < ARBITRATORS_PER_DISPUTE; i++) {
             uint256 maxStake = 0;
             uint256 maxIndex = 0;
             for (uint256 j = 0; j < 10; j++) {
@@ -175,25 +177,61 @@ contract TaskMarketplace {
         return topThree;
     }
 
-    // function resolveDispute(uint256 _taskId, address _recipient) external {
-    //     require(msg.sender == arbitrator, "Only the arbitrator can resolve disputes");
-    //     Task storage task = tasks[_taskId];
-    //     require(task.isDisputed, "No active dispute for this task");
-    //     require(_recipient == task.worker || _recipient == task.creator, "Invalid recipient");
-
-    //     task.isDisputed = false;
-    //     task.isPaid = true;
-
-    //     // Winning party gets the reward + original arbitrator fee
-    //     uint256 paymentAmount = task.reward + ARBITRATOR_FEE;
-    //     task.reward = 0;
+    function voteOnDispute(uint256 _taskId, bool _voteForWorker) external {
+        Dispute storage dispute = disputes[_taskId];
+        Task storage task = tasks[_taskId];
         
-    //     // Arbitrator gets the arbitrator fee from the losing party
-    //     payable(arbitrator).transfer(ARBITRATOR_FEE);
-    //     payable(_recipient).transfer(paymentAmount);
+        require(task.isDisputed, "No active dispute for this task");
+        require(!dispute.isResolved, "Dispute is already resolved");
+        
+        bool isArbitrator = false;
+        for (uint i = 0; i < ARBITRATORS_PER_DISPUTE; i++) {
+            if (dispute.arbitrators[i] == msg.sender) {
+                isArbitrator = true;
+                break;
+            }
+        }
 
-    //     emit DisputeResolved(_taskId, _recipient == task.worker);
-    // }
+        require(isArbitrator, "Only selected arbitrators can vote");
+        require(!dispute.hasVoted[msg.sender], "Arbitrator has already voted");
+
+        dispute.hasVoted[msg.sender] = true;
+
+        if (_voteForWorker) {
+            dispute.votesForWorker++;
+        } else {
+            dispute.votesForCreator++;
+        }
+
+        if (dispute.votesForWorker + dispute.votesForCreator == 3) {
+            resolveDispute(_taskId);
+        }
+
+        emit ArbitratorVoted(_taskId, msg.sender, _voteForWorker);
+    }
+
+    function resolveDispute(uint256 _taskId) internal {
+        Dispute storage dispute = disputes[_taskId];
+        Task storage task = tasks[_taskId];
+
+        bool workerWins = dispute.votesForWorker > dispute.votesForCreator;
+        address winner = workerWins ? task.worker : task.creator;
+
+        dispute.isResolved = true;
+        task.isDisputed = false;
+        task.isPaid = true;
+
+        // Winning party gets the reward + their original arbitrator fee
+        uint256 winnerPayment = task.reward + ARBITRATOR_FEE;
+        payable(winner).transfer(winnerPayment);
+
+        // Distribute arbitrator fee from the losing party
+        for (uint i = 0; i < ARBITRATORS_PER_DISPUTE; i++) {
+            payable(dispute.arbitrators[i]).transfer(ARBITRATOR_FEE / ARBITRATORS_PER_DISPUTE);
+        }
+
+        emit DisputeResolved(_taskId, workerWins);
+    }
 
     function releasePayment(uint256 _taskId) external {
         Task storage task = tasks[_taskId];
